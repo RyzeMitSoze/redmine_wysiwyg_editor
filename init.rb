@@ -17,3 +17,24 @@ Redmine::Plugin.register :redmine_wysiwyg_editor do
 end
 
 require File.expand_path('lib/redmine_wysiwyg_editor', __dir__)
+
+Rails.application.config.after_initialize do
+  next unless Rails.env.production?
+
+  require 'rake'
+
+  File.open(Rails.root.join('tmp/redmine_wysiwyg_editor_precompile.lock'), 'w') do |file|
+    next unless file.flock(File::LOCK_EX | File::LOCK_NB)
+
+    Rails.logger.info('[redmine_wysiwyg_editor] Running assets:precompile')
+
+    Rails.application.load_tasks
+    Rake::Task['assets:precompile'].reenable
+    Rake::Task['assets:precompile'].invoke
+
+    Rails.logger.info('[redmine_wysiwyg_editor] assets:precompile finished')
+  end
+rescue => e
+  Rails.logger.error("[redmine_wysiwyg_editor] assets:precompile failed: #{e.class}: #{e.message}")
+end
+
